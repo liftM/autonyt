@@ -1,0 +1,3 @@
+[submodule "third_party/english-words"]
+	path = third_party/english-words
+	url = git@github.com:dwyl/english-words
