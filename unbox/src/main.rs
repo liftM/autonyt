@@ -23,7 +23,7 @@ struct Opts {
 }
 
 fn side_validator(side: &str) -> Result<(), String> {
-    let s = side.chars().collect::<Set64<char>>();
+    let s: Set64<char> = side.chars().collect();
     if side.len() != 3 || s.len() != 3 {
         Err("puzzle sides must be three unique letters (one side of a puzzle)".to_string())
     } else {
@@ -38,7 +38,7 @@ fn main() {
     let puzzle = {
         let mut puzzle: Puzzle = [Set64::new(), Set64::new(), Set64::new(), Set64::new()];
         for (i, side) in opts.side.iter().enumerate() {
-            puzzle[i] = side.chars().collect::<Set64<char>>();
+            puzzle[i] = side.chars().collect();
         }
         puzzle
     };
@@ -49,7 +49,7 @@ fn main() {
 
     // Build a map of "character" to "puzzle-valid words that start with that character".
     // TODO: since the keys are known statically, we can use a struct instead of a map if we need to.
-    let mut starts_with = HashMap::<char, Vec<&str>>::with_capacity(26);
+    let mut starts_with: HashMap<char, Vec<&str>> = HashMap::with_capacity(26);
     for c in 'a'..='z' {
         starts_with.insert(c, Vec::new());
     }
@@ -66,33 +66,19 @@ fn main() {
     }
 
     // Iterating over all possible starting characters, construct puzzle-valid word strings of length at most max_words.
-    let missing_chars = puzzle
-        .iter()
-        .fold(Set64::<char>::new(), |acc, side| &acc | side);
+    let missing_chars: Set64<char> = puzzle.iter().fold(Set64::new(), |acc, side| &acc | side);
 
     // Start recursion: try every word as beginning of puzzle-valid word string.
     let max_words = opts.max_words;
-    let answer = starts_with
-        .keys()
-        .filter_map(|c| {
-            starts_with
-                .get(c)
-                .unwrap()
-                .iter()
-                .filter_map(|word| {
-                    word_strings_recurse(&starts_with, word, missing_chars.clone(), max_words - 1)
-                        .map(|mut ws| {
-                            ws.insert(0, word);
-                            ws
-                        })
-                })
-                .fold(None, shorter_word_string)
+    let answers = starts_with.keys().flat_map(|c| {
+        starts_with.get(c).unwrap().iter().flat_map(|word| {
+            word_strings_recurse(&starts_with, word, missing_chars.clone(), max_words)
         })
-        .fold(None, shorter_word_string);
+    });
 
-    match answer {
-        Some(a) => println!("{:?}", a),
-        None => println!("No answer found."),
+    println!("Answers:");
+    for a in answers {
+        println!("{:?}", a);
     }
 }
 
@@ -141,7 +127,7 @@ fn word_strings_recurse<'a>(
     word: &'a str,
     missing_chars: Set64<char>,
     remaining_words: i8,
-) -> Option<Vec<&'a str>> {
+) -> Vec<Vec<&'a str>> {
     // Compute new missing character set given this word.
     let mut chars = word.chars();
     let last = chars.next_back().unwrap();
@@ -154,22 +140,23 @@ fn word_strings_recurse<'a>(
     // Base case: there are no more characters missing. We've succeeded! Return
     // a result.
     if next_missing_chars.len() == 0 {
-        return Some(vec![word]);
+        return vec![vec![word]];
     }
 
     // Base case: there are no words remaining. We've failed to find words that
     // cover the puzzle.
     if remaining_words - 1 <= 0 {
-        return None;
+        return vec![];
     }
 
     // Recursive case: there are still characters missing, but we have more
     // words remaining.
+    // TODO: this DFS will naturally pick _longer_ solutions first. Maybe we
+    // want BFS instead?
     let starts_with_last_char = starts_with.get(&last).unwrap();
-
     return starts_with_last_char
         .iter()
-        .filter_map(|next_word| {
+        .flat_map(|next_word| {
             word_strings_recurse(
                 starts_with,
                 next_word,
@@ -177,14 +164,11 @@ fn word_strings_recurse<'a>(
                 remaining_words - 1,
             )
         })
-        .fold(None, shorter_word_string);
-}
-
-fn shorter_word_string<'a>(prev: Option<Vec<&'a str>>, next: Vec<&'a str>) -> Option<Vec<&'a str>> {
-    match prev {
-        None => Some(next),
-        Some(prev) => Some(if next.len() < prev.len() { next } else { prev }),
-    }
+        .map(|mut ws| {
+            ws.insert(0, word);
+            ws
+        })
+        .collect();
 }
 
 #[cfg(test)]
@@ -195,10 +179,10 @@ mod tests {
     fn test_validate() {
         // TODO: once https://github.com/rust-lang/rust/issues/75243 lands, use `.map(|x| x.chars().collect::<Set64<char>>()`.
         let puzzle: super::Puzzle = [
-            "uoa".chars().collect::<Set64<char>>(),
-            "qtl".chars().collect::<Set64<char>>(),
-            "ein".chars().collect::<Set64<char>>(),
-            "ysm".chars().collect::<Set64<char>>(),
+            "uoa".chars().collect(),
+            "qtl".chars().collect(),
+            "ein".chars().collect(),
+            "ysm".chars().collect(),
         ];
         assert!(validate("melony", &puzzle));
         assert!(validate("yeast", &puzzle));
