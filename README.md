@@ -4,17 +4,35 @@
 
 ## Table of contents <!-- omit in toc -->
 
-- [`hexabee`](#hexabee)
+- [`nyt-word-patch`](#nyt-word-patch)
   - [Usage](#usage)
+- [`hexabee`](#hexabee)
+  - [Usage](#usage-1)
   - [Design](#design)
     - [Approach 1: index and set intersection](#approach-1-index-and-set-intersection)
     - [Approach 2: generate valid words](#approach-2-generate-valid-words)
     - [Approach 3: grep](#approach-3-grep)
 - [`unbox`](#unbox)
-  - [Usage](#usage-1)
+  - [Usage](#usage-2)
   - [Design](#design-1)
     - [Idea 1](#idea-1)
     - [Idea 2](#idea-2)
+
+## `nyt-word-patch`
+
+`nyt-word-patch` removes words from the English words dictionary provided by the git submodule at `third_party/english-words` at `words_alpha.txt` that NYT does not accept as words in their puzzle games. This prints the modified file to to STDOUT instead of modifying in-place.
+
+### Usage
+
+```bash
+$ ./nyt-word-patch/nyt-word-patch.sh $PATH_TO_REMOVE_WORDS $FILE_TO_REMOVE_FROM > $OUTPUT_FILE
+
+# For example:
+$ ./nyt-word-patch/nyt-word-patch.sh ./nyt-word-patch/not-valid-puzzle-words.txt ./third_party/english-words/words_alpha.txt > .scratch/puzzle-words
+
+# To verify:
+$ sdiff -l ./.scratch/puzzle-words ./third_party/english-words/words_alpha.txt | cat -n | grep -v -e '($'
+```
 
 ## `hexabee`
 
